@@ -34,8 +34,9 @@ die ()
 helpme ()
 {
 
-	echo "Usage: $0 [-s srcdir] [-q] hw|xen [-- buildrump.sh options]"
+	echo "Usage: $0 [-s srcdir] [-k] [-q] hw|xen [-- buildrump.sh options]"
 	printf "\t-s: specify alternative src-netbsd location (expert-only)\n"
+	printf "\t-k: build without libc\n"
 	printf "\t-q: quiet(er) build.  option maybe be specified twice.\n\n"
 	printf "buildrump.sh options are passed to buildrump.sh (expert-only)\n"
 	printf "\n"
@@ -48,6 +49,7 @@ set -e
 
 # defaults
 STDJ='-j4'
+BUILDLIBC=true
 RUMPSRC=src-netbsd
 BUILDRUMP=$(pwd)/buildrump.sh
 
@@ -67,8 +69,11 @@ parseargs ()
 {
 
 	orignargs=$#
-	while getopts '?qs:' opt; do
+	while getopts '?qks:' opt; do
 		case "$opt" in
+		'k')
+			BUILDLIBC=false
+			;;
 		's')
 			RUMPSRC=${OPTARG}
 			;;
@@ -276,6 +281,7 @@ makeconfigmk ()
 	echo "RUMPMAKE=${RUMPMAKE}" >> ${1}
 	echo "BUILDRUMP_TOOLFLAGS=$(pwd)/${RUMPTOOLS}/toolchain-conf.mk" >> ${1}
 	echo "MACHINE=${MACHINE}" >> ${1}
+	echo "BUILDLIBC=${BUILDLIBC}" >> ${1}
 
 	# wrap mandatory toolchain bits
 	for t in AR AS CC CPP LD NM OBJCOPY OBJDUMP RANLIB READELF \
@@ -306,7 +312,9 @@ checksubmodules
 . ${PLATFORMDIR}/platform.conf
 
 buildrump "$@"
-builduserspace
+if ${BUILDLIBC}; then
+	builduserspace
+fi
 
 # depends on config.mk
 buildpci

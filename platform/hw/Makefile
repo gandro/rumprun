@@ -2,12 +2,16 @@ PLATFORM=hw
 PLATFORM_DEFAULT_TESTER=qemu
 OBJ_DIR=.
 
-all: app-tools include/bmk/machine rumprun.o commonlibs buildtest
-
 include ../../global.mk
 -include config.mk
 ifdef BUILDRUMP_TOOLFLAGS
 include ${BUILDRUMP_TOOLFLAGS}
+endif
+
+ifeq (${BUILDLIBC},true)
+all: app-tools include/bmk/machine rumprun.o commonlibs buildtest
+else
+all: include/bmk/machine rumprun.o kernellibs
 endif
 
 include ../Makefile.inc
@@ -44,7 +48,9 @@ OBJS_BMK+= ${OBJS_BMK-y}
 
 include arch/${MACHINE}/Makefile.inc
 
+ifeq (${BUILDLIBC},true)
 OBJS_BMK+=	init.o
+endif
 
 OBJS= ${OBJS_BMK} ${OBJS_APP}
 
