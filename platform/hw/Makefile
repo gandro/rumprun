@@ -30,6 +30,9 @@ endif
 ifeq (${MACHINE},amd64)
 supported:= true
 endif
+ifeq (${MACHINE},riscv)
+supported:= true
+endif
 ifeq (${MACHINE},arm)
 ifdef IWANTARM
 supported:= true
