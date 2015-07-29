@@ -32,6 +32,9 @@ endif
 ifeq (${MACHINE},amd64)
 supported:= true
 endif
+ifeq (${MACHINE},riscv)
+supported:= true
+endif
 ifeq (${MACHINE},evbarm)
 supported:= true
 HASPCI:= n

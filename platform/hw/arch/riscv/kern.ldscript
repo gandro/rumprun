@@ -1,0 +1,109 @@
+OUTPUT_ARCH(riscv)
+ENTRY( _start )
+SECTIONS
+{
+	. = 0x100; 
+	_begin = . ;
+	.text :
+	{
+		KEEP(*(.text.entry))
+		*(.text)
+		*(.text)
+		*(.text.*)
+		*(.stub)
+		*(.note*)
+	}
+	_etext = . ;
+
+	.rodata :
+	AT (LOADADDR(.text) + (ADDR(.rodata) - ADDR(.text)))
+	{
+		*(.rodata)
+		*(.rodata.*)
+	}
+
+	.initfini :
+	AT (LOADADDR(.text) + (ADDR(.initfini) - ADDR(.text)))
+	{
+		__init_array_start = . ;
+		*(SORT_BY_INIT_PRIORITY(.init_array.*))
+		*(SORT_BY_INIT_PRIORITY(.ctors*))
+		*(.init_array)
+		__init_array_end = . ;
+		__fini_array_start = . ;
+		*(SORT_BY_INIT_PRIORITY(.fini_array.*))
+		*(SORT_BY_INIT_PRIORITY(.dtors*))
+		*(.fini_array)
+		__fini_array_end = . ;
+	}
+
+	/* Start of initialized data segment */
+	. = ALIGN(16);
+	_data_start = .;
+	.data :
+	AT (LOADADDR(.text) + (ADDR(.data) - ADDR(.text)))
+	{
+		*(.data)
+	}
+	_edata = . ;
+
+	link_set_modules :
+	{
+		__start_link_set_modules = .;
+		*(link_set_modules);
+		__stop_link_set_modules = .;
+	}
+
+	link_set_rump_components :
+	{
+		__start_link_set_rump_components = .;
+		*(link_set_rump_components);
+		__stop_link_set_rump_components = .;
+	}
+
+	. = ALIGN(16);
+	_gp = . + 0x800;
+
+	.sdata :
+	AT (LOADADDR(.text) + (ADDR(.sdata) - ADDR(.text)))
+	{
+		_sdata_start = . ;
+		*(.sdata)
+		_sdata_end = . ;
+	}
+
+	.tdata :
+	AT (LOADADDR(.text) + (ADDR(.tdata) - ADDR(.text)))
+	{
+		_tdata_start = . ;
+		*(.tdata)
+		_tdata_end = . ;
+	}
+
+	.tbss :
+	AT (LOADADDR(.text) + (ADDR(.tbss) - ADDR(.text)))
+	{
+		_tbss_start = . ;
+		*(.tbss)
+		_tbss_end = . ;
+	}
+
+	.sbss :
+	AT (LOADADDR(.text) + (ADDR(.sbss) - ADDR(.text)))
+	{
+		_sbss_start = . ;
+		*(.sbss)
+		_sbss_end = . ;
+	}
+
+	__bss_start = . ;
+	.bss :
+	AT (LOADADDR(.text) + (ADDR(.bss) - ADDR(.text)))
+	{
+		*(.bss)
+		*(COMMON)
+		*(bootstack)
+	}
+	_end = . ;
+	PROVIDE (end = .) ;
+}
