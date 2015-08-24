@@ -34,7 +34,8 @@ die ()
 helpme ()
 {
 
-	echo "Usage: $0 [-s srcdir] [-q] hw|xen [-- buildrump.sh options]"
+	echo "Usage: $0 [-k] [-s srcdir] [-q] hw|xen [-- buildrump.sh options]"
+	printf "\t-k: build kernel only, without libc or tools (expert-only)\n"
 	printf "\t-s: specify alternative src-netbsd location (expert-only)\n"
 	printf "\t-q: quiet(er) build.  option maybe be specified twice.\n\n"
 	printf "buildrump.sh options are passed to buildrump.sh (expert-only)\n"
@@ -50,6 +51,7 @@ set -e
 STDJ='-j4'
 RUMPSRC=src-netbsd
 BUILDRUMP=$(pwd)/buildrump.sh
+KERNONLY=false
 
 # figure out where gmake lies
 if [ -z "${MAKE}" ]; then
@@ -67,8 +69,11 @@ parseargs ()
 {
 
 	orignargs=$#
-	while getopts '?qs:' opt; do
+	while getopts '?kqs:' opt; do
 		case "$opt" in
+		'k')
+			KERNONLY=true
+			;;
 		's')
 			RUMPSRC=${OPTARG}
 			;;
@@ -88,6 +93,10 @@ parseargs ()
 	export PLATFORMDIR=platform/${PLATFORM}
 	[ -d ${PLATFORMDIR} ] || die Platform \"$PLATFORM\" not supported!
 	shift
+
+	if [ ${KERNONLY} -a ${PLATFORM} != hw ]; then
+		die 'kernel-only mode (-k) only supports "hw" platform'
+	fi
 
 	if [ $# -gt 0 ]; then
 		if [ $1 = '--' ]; then
@@ -267,11 +276,13 @@ buildpci ()
 buildkernlibs ()
 {
 
-	( cd lib/librumpkern_bmktc
-		${RUMPMAKE} ${STDJ} obj
-		${RUMPMAKE} ${STDJ} dependall
-		${RUMPMAKE} ${STDJ} install
-	)
+	for lib in librumpkern_bmktc librumpkern_compiler_rt; do
+		( cd lib/${lib}
+			${RUMPMAKE} ${STDJ} obj
+			${RUMPMAKE} ${STDJ} dependall
+			${RUMPMAKE} ${STDJ} install
+		)
+	done
 }
 
 wraponetool ()
@@ -333,7 +344,7 @@ checksubmodules
 . ${PLATFORMDIR}/platform.conf
 
 buildrump "$@"
-builduserspace
+${KERNONLY} || builduserspace
 
 # depends on config.mk
 buildpci
@@ -347,7 +358,8 @@ doextras || die 'platforms extras failed.  tillerman needs tea?'
 ln -sf ${PLATFORMDIR}/rump ./rumprun
 
 # do final build of the platform bits
-( cd ${PLATFORMDIR} && ${MAKE} || exit 1)
+${KERNONLY} && MAKEARGS="-f Makefile.kernonly"
+( cd ${PLATFORMDIR} && ${MAKE} ${MAKEARGS} || exit 1)
 [ $? -eq 0 ] || die platform make failed!
 
 # echo some useful information for the user

@@ -32,7 +32,9 @@ ${RUMPUSERDIR}/${PLATFORM}/libbmk_rumpuser.a:
 	    && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} obj \
 	    && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} dependall )
 
-commonlibs: ${BASEDIR}/${PLATFORM}/librumprun_base.a ${COREDIR}/${PLATFORM}/libbmk_core.a ${RUMPUSERDIR}/${PLATFORM}/libbmk_rumpuser.a ${COMMONDIR}/pseudolinkstubs.o
+commonlibs: userlibs platformlibs
+userlibs: ${BASEDIR}/${PLATFORM}/librumprun_base.a ${COMMONDIR}/pseudolinkstubs.o
+platformlibs: ${COREDIR}/${PLATFORM}/libbmk_core.a ${RUMPUSERDIR}/${PLATFORM}/libbmk_rumpuser.a
 
 .PHONY: buildtest
 buildtest: ../../tests/hello/hello.c ${OBJ_DIR}/rumprun.o commonlibs app-tools
