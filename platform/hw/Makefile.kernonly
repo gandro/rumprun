@@ -1,0 +1,62 @@
+PLATFORM=hw
+OBJ_DIR=.
+
+all: include/hw/machine rumprun.o platformlibs
+
+include ../../global.mk
+-include config.mk
+include ../Makefile.inc
+
+CPPFLAGS=	-Iinclude -Irump/include -I../../include -nostdinc
+
+# Check if we're building for a supported target.
+supported= false
+HASPCI= y
+# assume we're doing "make clean"
+MACHINE?= i386
+ifeq (${MACHINE},i386)
+supported:= true
+endif
+ifeq (${MACHINE},amd64)
+supported:= true
+endif
+ifeq (${MACHINE},evbarm)
+supported:= true
+HASPCI:= n
+ARCHDIR= arm/integrator
+endif
+ifneq (${supported},true)
+$(error only supported target is x86, you have ${MACHINE})
+endif
+
+ARCHDIR?= ${MACHINE}
+
+OBJS_BMK-y+=		intr.o clock_subr.o kernel.o multiboot.o undefs.o
+
+OBJS_BMK+= ${OBJS_BMK-y}
+
+include arch/${ARCHDIR}/Makefile.inc
+
+OBJS= ${OBJS_BMK}
+
+.PHONY:	clean cleandir
+
+include/hw/machine:
+	@ln -s ../arch/${MACHINE_ARCH} include/hw/machine
+
+links: include/hw/machine
+
+rumprun.o: ${OBJS}
+	${CC} -nostdlib ${CFLAGS} -Wl,-r ${OBJS_BMK} -o $@
+
+clean: commonclean
+	rm -f ${OBJS} include/hw/machine
+
+cleandir: clean
+
+cleanrump: clean
+	rm -rf rump rumpobj rumptools
+
+distcleanrump: cleanrump
+	rm -f config.mk
+	${MAKE} -C ../../tests clean
