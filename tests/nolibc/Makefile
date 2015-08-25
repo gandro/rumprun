@@ -1,6 +1,12 @@
 include ../../global.mk
 include ../../platform/hw/config.mk
 
+ifdef BUILDRUMP_TOOLFLAGS
+include ${BUILDRUMP_TOOLFLAGS}
+endif
+
+CFLAGS+=	${BUILDRUMP_TOOL_CFLAGS}
+
 LDFLAGS:= -L$(abspath ../../rumprun/lib)
 LDFLAGS+= -L$(abspath ../../lib/libbmk_core/hw/)
 LDFLAGS+= -L$(abspath ../../lib/libbmk_rumpuser/hw/)
@@ -15,6 +21,10 @@ ifeq (${MACHINE},amd64)
 LDFLAGS+= -z max-page-size=0x1000
 endif
 
+ifeq (${MACHINE},i386)
+LDFLAGS+= -m elf_i386
+endif
+
 OBJS= main.o $(abspath ../../platform/hw/rumprun.o)
 
 .PHONY: clean
@@ -22,9 +32,9 @@ OBJS= main.o $(abspath ../../platform/hw/rumprun.o)
 main.elf: ${OBJS}
 	${LD} ${LDFLAGS} -T${LDSCRIPT} 					\
 	${OBJS} 							\
-	-lrumpkern_compiler_rt 						\
 	--whole-archive -lrumpvfs -lrump --no-whole-archive		\
 	-lbmk_core -lbmk_rumpuser					\
+	-lrumpkern_compiler_rt 						\
 	-o $@
 
 clean:
