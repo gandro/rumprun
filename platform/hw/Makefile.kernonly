@@ -5,9 +5,14 @@ all: include/hw/machine rumprun.o platformlibs
 
 include ../../global.mk
 -include config.mk
+ifdef BUILDRUMP_TOOLFLAGS
+include ${BUILDRUMP_TOOLFLAGS}
+endif
+
 include ../Makefile.inc
 
 CPPFLAGS=	-Iinclude -Irump/include -I../../include -nostdinc
+CFLAGS+=	${BUILDRUMP_TOOL_CFLAGS}
 
 # Check if we're building for a supported target.
 supported= false
