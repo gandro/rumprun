@@ -3,6 +3,7 @@ PLATFORM_DEFAULT_TESTER=qemu
 OBJ_DIR=.
 
 all: app-tools include/hw/machine rumprun.o commonlibs buildtest
+kernonly: include/hw/machine rumprun_noinit.o platformlibs compiler_rt
 
 include ../../global.mk
 -include config.mk
@@ -67,6 +68,9 @@ rumprun.o: ${OBJS}
 	${CC} -nostdlib ${CFLAGS} -Wl,-r ${OBJS_BMK} -o $@
 	${OBJCOPY} -w -G bmk_* -G rumpuser_* \
 	    -G rumprun_platform_rumpuser_init -G _start $@
+
+rumprun_noinit.o: ${OBJS}
+	${CC} -nostdlib ${CFLAGS} -Wl,-r $(filter-out init.o,${OBJS_BMK}) -o $@
 
 clean: app-tools_clean commonclean
 	rm -f ${OBJS} include/hw/machine buildtest

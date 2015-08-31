@@ -3,6 +3,7 @@ PLATFORM_DEFAULT_TESTER=xen
 
 .PHONY: default
 default: prepare mini-os commonlibs rumprun app-tools buildtest
+kernonly: prepare mini-os platformlibs compiler_rt rumprun_noinit
 
 include ../../global.mk
 -include config.mk
@@ -63,6 +64,13 @@ rumprun: $(OBJ_DIR)/rumprun.o
 
 $(OBJ_DIR)/rumprun.o: $(RUMP_OBJS) commonlibs
 	$(CC) -Wl,-r $(CFLAGS) $(LDFLAGS) $(RUMP_OBJS) -nostdlib -o $@
+
+.PHONY: rumprun_noinit
+rumprun: $(OBJ_DIR)/rumprun_noinit.o
+
+$(OBJ_DIR)/rumprun_noinit.o: $(RUMP_OBJS) platformlibs
+	$(CC) -Wl,-r $(CFLAGS) $(LDFLAGS) \
+		$(filter-out $(OBJ_DIR)/init.o,$(RUMP_OBJS)) -nostdlib -o $@
 
 APP_TOOLS_PLATFORM= xen
 APP_TOOLS_OBJS_BAKE=	$(abspath $(OBJ_DIR)/xen/minios.o)

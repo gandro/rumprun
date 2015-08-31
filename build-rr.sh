@@ -94,10 +94,6 @@ parseargs ()
 	[ -d ${PLATFORMDIR} ] || die Platform \"$PLATFORM\" not supported!
 	shift
 
-	if [ ${KERNONLY} -a ${PLATFORM} != hw ]; then
-		die 'kernel-only mode (-k) only supports "hw" platform'
-	fi
-
 	if [ $# -gt 0 ]; then
 		if [ $1 = '--' ]; then
 			shift
@@ -273,16 +269,15 @@ buildpci ()
 	fi
 }
 
+
 buildkernlibs ()
 {
 
-	for lib in librumpkern_bmktc librumpkern_compiler_rt; do
-		( cd lib/${lib}
-			${RUMPMAKE} ${STDJ} obj
-			${RUMPMAKE} ${STDJ} dependall
-			${RUMPMAKE} ${STDJ} install
-		)
-	done
+	( cd lib/librumpkern_bmktc
+		${RUMPMAKE} ${STDJ} obj
+		${RUMPMAKE} ${STDJ} dependall
+		${RUMPMAKE} ${STDJ} install
+	)
 }
 
 wraponetool ()
@@ -358,7 +353,7 @@ doextras || die 'platforms extras failed.  tillerman needs tea?'
 ln -sf ${PLATFORMDIR}/rump ./rumprun
 
 # do final build of the platform bits
-${KERNONLY} && MAKEARGS="-f Makefile.kernonly"
+${KERNONLY} && MAKEARGS="kernonly"
 ( cd ${PLATFORMDIR} && ${MAKE} ${MAKEARGS} || exit 1)
 [ $? -eq 0 ] || die platform make failed!
 

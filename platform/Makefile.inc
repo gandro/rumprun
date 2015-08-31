@@ -2,39 +2,36 @@ ifeq (${PLATFORM},)
 $(error need to specify $$PLATFORM!)
 endif
 
-COREDIR:=       $(shell pwd)/../../lib/libbmk_core
-RUMPUSERDIR:=   $(shell pwd)/../../lib/libbmk_rumpuser
-BASEDIR:=       $(shell pwd)/../../lib/librumprun_base
+COREDIR:=		$(shell pwd)/../../lib/libbmk_core
+RUMPUSERDIR:=		$(shell pwd)/../../lib/libbmk_rumpuser
+BASEDIR:=		$(shell pwd)/../../lib/librumprun_base
+RUMPCOMPILER_RT:=	$(shell pwd)/../../lib/librumpkern_compiler_rt
 
 COMMONDIR:=	$(abspath ../)
 
 LDFLAGS_BAKE+=	-L${BASEDIR}/${PLATFORM} -L${COREDIR}/${PLATFORM}	\
 		-L${RUMPUSERDIR}/${PLATFORM}
 
-.PHONY: ${BASEDIR}/${PLATFORM}/librumprun_base.a
-${BASEDIR}/${PLATFORM}/librumprun_base.a:
-	( cd ${BASEDIR} \
+define BUILDLIB_target =
+.PHONY: ${1}/${PLATFORM}/${2}
+${1}/${PLATFORM}/${2}:
+	( cd ${1} \
 	    && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} obj \
 	    && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} dependall )
+endef
+
+$(eval $(call BUILDLIB_target,${BASEDIR},librumprun_base.a))
+$(eval $(call BUILDLIB_target,${COREDIR},libbmk_core.a))
+$(eval $(call BUILDLIB_target,${RUMPUSERDIR},libbmk_rumpuser.a))
+$(eval $(call BUILDLIB_target,${RUMPCOMPILER_RT},librumpkern_compiler_rt.a))
 
 ${COMMONDIR}/pseudolinkstubs.c: ${BASEDIR}/${PLATFORM}/librumprun_base.a
 	sh ../makepseudolinkstubs.sh ${NM} ${RUMPSRC} $< $@
 
-.PHONY: ${COREDIR}/${PLATFORM}/libbmk_core.a
-${COREDIR}/${PLATFORM}/libbmk_core.a:
-	( cd ${COREDIR} \
-	    && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} obj \
-	    && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} dependall )
-
-.PHONY: ${RUMPUSERDIR}/${PLATFORM}/libbmk_rumpuser.a
-${RUMPUSERDIR}/${PLATFORM}/libbmk_rumpuser.a:
-	( cd ${RUMPUSERDIR} \
-	    && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} obj \
-	    && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} dependall )
-
-commonlibs: userlibs platformlibs
+commonlibs: platformlibs userlibs
 userlibs: ${BASEDIR}/${PLATFORM}/librumprun_base.a ${COMMONDIR}/pseudolinkstubs.o
 platformlibs: ${COREDIR}/${PLATFORM}/libbmk_core.a ${RUMPUSERDIR}/${PLATFORM}/libbmk_rumpuser.a
+compiler_rt: ${RUMPCOMPILER_RT}/${PLATFORM}/librumpkern_compiler_rt.a
 
 .PHONY: buildtest
 buildtest: ../../tests/hello/hello.c ${OBJ_DIR}/rumprun.o commonlibs app-tools
@@ -54,6 +51,8 @@ commonclean:
 	( cd ${BASEDIR} && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} cleandir )
 	( cd ${COREDIR} && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} cleandir )
 	( cd ${RUMPUSERDIR} && ${RUMPMAKE} MAKEOBJDIR=${PLATFORM} cleandir )
+	( cd ${RUMPCOMPILER_RT} && \
+		${RUMPMAKE} RUMPSRC=${RUMPSRC} MAKEOBJDIR=${PLATFORM} cleandir )
 	rm -f ${COMMONDIR}/pseudolinkstubs.c ${COMMONDIR}/pseudolinkstubs.o
 
 .PHONY: tests
