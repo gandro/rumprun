@@ -6,5 +6,6 @@ PCIDIR!=	cd ${.PARSEDIR} ; pwd -P
 PCI_HYPERCALLS=		rumphyper_pci.c
 PCI_HYPERCALLS_PATH:=	${PCIDIR}
 PCI_CPPFLAGS:=		-I${PCIDIR}/../xen/include
+PCI_CPPFLAGS+=		-D_KERNEL
 
 .include "${PCIDIR}/../../../lib/Makefile.pcicommon"
