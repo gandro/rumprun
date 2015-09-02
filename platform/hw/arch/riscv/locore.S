@@ -33,8 +33,8 @@ END(bmk_riscv_irq_nmi)
 ENTRY_EXC(_start, 0x40)
 	la gp, _gp
 	la sp, bootstack
-	/* enable interrupts */
-	csrsi mstatus, MSTATUS_IE
+	/* disable interrupts, will be enabled in bmk_riscv_boot */
+	csrci mstatus, MSTATUS_IE
 	/* ready to go */
 	li a0, 0
 	jal bmk_riscv_boot
@@ -89,15 +89,13 @@ ENTRY(bmk_riscv_exception)
 	/* exception was a trap */
 	csrr a1, mepc
 	csrr a2, mbadaddr
-	j bmk_cpu_riscv_trap
+	tail bmk_cpu_riscv_trap
 1:
 	andi a0, a0, 0xF
 	beqz a0, bmk_cpu_isr_sw
 	li t0, 1
 	beq t0, a0, bmk_cpu_isr_timer
-	li t0, 2
-	beq t0, a0, bmk_cpu_isr_htif
-	j bmk_isr
+	tail bmk_cpu_isr
 2:
 	LOAD  x1,  1*REGBYTES(sp)
 	LOAD  x2,  2*REGBYTES(sp)

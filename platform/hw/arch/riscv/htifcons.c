@@ -28,22 +28,27 @@
 
 #include "encoding.h"
  
-#define HTIF_DEV_SHIFT      (56)
-#define HTIF_CMD_SHIFT      (48)
+#define HTIF_DEV_SHIFT		(56)
+#define HTIF_CMD_SHIFT		(48)
 
-#define HTIF_CMD_READ       (0x00ULL)
-#define HTIF_CMD_WRITE      (0x01ULL)
-#define HTIF_CMD_IDENTIFY   (0xFFULL)
+#define HTIF_CMD_READ		(0x00ULL)
+#define HTIF_CMD_WRITE		(0x01ULL)
+#define HTIF_CMD_IDENTIFY	(0xFFULL)
 
-#define HTIF_DEV_CONSOLE    (1ULL) // hard-coded, no device discovery yet
+#define HTIF_DEV_CONSOLE	(1ULL) /* hard-coded, no device discovery yet */
 
-#define HTIF_CONSOLE_PUTC   ((HTIF_DEV_CONSOLE << HTIF_DEV_SHIFT) | (HTIF_CMD_WRITE << HTIF_CMD_SHIFT))
+#define HTIF_CONSOLE_PUTC	((HTIF_DEV_CONSOLE << HTIF_DEV_SHIFT) | \
+				 (HTIF_CMD_WRITE << HTIF_CMD_SHIFT))
 
 void
 bmk_cons_putc(int c)
 {
 	uint64_t packet = HTIF_CONSOLE_PUTC | c;
+
+	splhigh();
 	while (swap_csr(mtohost, packet) != 0);
+	while (swap_csr(mfromhost, 0));
+	spl0();
 }
 
 void

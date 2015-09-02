@@ -42,6 +42,8 @@ extern const char _tbss_start[], _tbss_end[];
     
 int bmk_spldepth = 1;
 
+long bmk_mfromhost = 0;
+
 void
 bmk_cpu_riscv_trap(int code, void *pc, void *badaddr)
 {
@@ -54,16 +56,24 @@ void bmk_cpu_isr_timer(void)
 
 }
 
-void bmk_cpu_isr_htif(void)
+void bmk_cpu_isr(int irq)
 {
-	uintptr_t fromhost = swap_csr(mfromhost, 0);
-	if (!fromhost)
-		return;
+	/* mask interrupts in software, since the hardware can't do it */
+	if (bmk_cpu_ie & (1 << irq)) {
+		bmk_isr(irq);
+	}
+	
+	
+	/* will deadlock if we don't acknowledge HTIF interrupts,
+	   since it will trigger until we deal with it */
+	if (irq == BMK_CORE_RISCV_HTIF_IRQ) {
+		bmk_mfromhost = swap_csr(mfromhost, 0);
+	}
 }
 
 void bmk_cpu_isr_sw(void)
 {
-    while(1);
+    bmk_platform_halt("software interrupt fired!");
 }
 
 /* XXX Currently, RISC-V thread local storage is not properly documented,

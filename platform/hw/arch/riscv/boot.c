@@ -32,7 +32,7 @@
 #include <bmk-core/pgalloc.h>
 
 /* Supposedly, the amount of physical memory can be read in address 0x0, but
- * this is not the case for spike. Thus, we use a fixed amount of memory
+ * this is not the case for spike. Thus, we assume a fixed amount of memory.
  */
 static void
 bmk_riscv_meminit(void)
@@ -59,6 +59,7 @@ bmk_riscv_boot(void)
 	bmk_sched_init();
 
 	bmk_riscv_meminit();
+	bmk_intr_init();
 	spl0();
 
 	bmk_run("");

@@ -21,6 +21,7 @@ static inline void
 splhigh(void)
 {
 
+	/* clear IE in MSTATUS register */
 	__asm__ __volatile__("csrci 0x300, 0x1");
 	bmk_spldepth++;
 }
@@ -32,6 +33,7 @@ spl0(void)
 	if (bmk_spldepth == 0)
 		bmk_platform_halt("out of interrupt depth!");
 	if (--bmk_spldepth == 0)
+			/* set IE in MSTATUS register */
 			__asm__ __volatile__("csrsi 0x300, 0x1");
 }
 
