@@ -23,8 +23,8 @@
  * SUCH DAMAGE.
  */
  
-#include <bmk/types.h>
-#include <bmk/kernel.h>
+#include <hw/types.h>
+#include <hw/kernel.h>
 
 #include "encoding.h"
  
@@ -41,7 +41,7 @@
 				 (HTIF_CMD_WRITE << HTIF_CMD_SHIFT))
 
 void
-bmk_cons_putc(int c)
+cons_putc(int c)
 {
 	uint64_t packet = HTIF_CONSOLE_PUTC | c;
 
@@ -52,10 +52,10 @@ bmk_cons_putc(int c)
 }
 
 void
-bmk_cons_puts(const char *s)
+cons_puts(const char *s)
 {
 	int c;
 
 	while ((c = *s++) != 0)
-		bmk_cons_putc(c);
+		cons_putc(c);
 }

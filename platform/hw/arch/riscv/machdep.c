@@ -23,72 +23,76 @@
  * SUCH DAMAGE.
  */
 
-#include <bmk/types.h>
-#include <bmk/kernel.h>
+#include <hw/types.h>
+#include <hw/kernel.h>
 
 #include <bmk-core/sched.h>
 #include <bmk-core/printf.h>
 
-#include <bmk-core/riscv/isr.h>
-
+#include "isr.h"
 #include "encoding.h"
+   
+extern int spldepth;
 
-extern const char _tdata_start[], _tdata_end[];
-extern const char _tbss_start[], _tbss_end[];
-#define TDATASIZE (_tdata_end - _tdata_start)
-#define TBSSSIZE (_tbss_end - _tbss_start)
-#define TCBOFFSET \
-    (((TDATASIZE + TBSSSIZE + sizeof(void *)-1)/sizeof(void *))*sizeof(void *))
-    
-int bmk_spldepth = 1;
-
+unsigned irqmask = 0;
 long bmk_mfromhost = 0;
 
 void
-bmk_cpu_riscv_trap(int code, void *pc, void *badaddr)
+splhigh(void)
+{
+
+	/* clear IE in MSTATUS register */
+	clear_csr(mstatus, MSTATUS_IE);
+	spldepth++;
+}
+
+void
+spl0(void)
+{
+
+	if (spldepth == 0)
+		bmk_platform_halt("out of interrupt depth!");
+	if (--spldepth == 0)
+		set_csr(mstatus, MSTATUS_IE);
+}
+
+void
+riscv_trap(int code, void *pc, void *badaddr)
 {
     bmk_printf("Trap %d at pc %p, addr %p\n", code, pc, badaddr);
     while(1);
 }
 
-void bmk_cpu_isr_timer(void)
+void riscv_isr_timer(void)
 {
 
 }
 
-void bmk_cpu_isr(int irq)
+void riscv_isr(int irq)
 {
-	/* mask interrupts in software, since the hardware can't do it */
-	if (bmk_cpu_ie & (1 << irq)) {
-		bmk_isr(irq);
-	}
-	
-	
-	/* will deadlock if we don't acknowledge HTIF interrupts,
-	   since it will trigger until we deal with it */
-	if (irq == BMK_CORE_RISCV_HTIF_IRQ) {
+	if (irq == RISCV_HTIF_IRQ) {
 		bmk_mfromhost = swap_csr(mfromhost, 0);
+	} else {
+		isr(irq);
 	}
 }
 
-void bmk_cpu_isr_sw(void)
+void riscv_isr_sw(void)
 {
-    bmk_platform_halt("software interrupt fired!");
+	bmk_platform_halt("software interrupt fired!?");
 }
 
-/* XXX Currently, RISC-V thread local storage is not properly documented,
- * but GCC assumes that the tp register points after the TCB, directly into
- * tdata
+/* XXX: RISC-V Thread Local Storage is not properly documented. According to
+ *      https://lists.riscv.org/lists/arc/sw-dev/2015-05/msg00032.html
+ *      the TP register points directly the the first static TLS block,
+ *      at the end of the TCB, which is neither Variant I nor II. 
+ *      We assume next->btcb_t is Variant I and work around it.
  */
+#define TLSOFFSET (2*sizeof(void *))
+
 void
 bmk_platform_cpu_sched_settls(struct bmk_tcb *next)
 {
-	unsigned long tp = next->btcb_tp - TCBOFFSET;
+	unsigned long tp = next->btcb_tp + TLSOFFSET;
 	__asm__ __volatile__("mv tp, %0" : : "r"(tp));
-}
-
-void
-bmk_cpu_init(void)
-{
-
 }

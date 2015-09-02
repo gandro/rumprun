@@ -23,27 +23,26 @@
  * SUCH DAMAGE.
  */
 
-#include <bmk/kernel.h>
+#include <hw/kernel.h>
 
-#include <bmk-core/riscv/isr.h>
-
-int bmk_cpu_ie = 0;
+#include "isr.h"
 
 int
-bmk_cpu_intr_init(int intr)
+cpu_intr_init(int intr)
 {
-	if (intr >= BMK_CORE_RISCV_MAX_IRQ) {
-		return BMK_EGENERIC;
-	}
-
-	bmk_cpu_ie |= (1 << intr);
-	return 0;
+	/* XXX: no yet specified, maybe map to HTIF devices= */
+	return BMK_EGENERIC;
 }
 
 void
-bmk_cpu_intr_ack(void)
+cpu_intr_ack(unsigned mask)
 {
 
-    /* XXX: not really clear how one would do this on RISCV at this point.
-       The isr needs to make sure the interrupt does not fire again */
+    /* XXX: not really clear how one would do this on RISCV at this point. */
+}
+
+void
+cpu_init(void)
+{
+
 }

@@ -10,9 +10,9 @@
 	name:
 
 #define TRAP(name)					 \
-ENTRY_EXC(bmk_riscv_trap_##name, 0x40)			 \
-	j bmk_riscv_exception				;\
-END(bmk_riscv_trap_##name)				 \
+ENTRY_EXC(riscv_trap_##name, 0x40)			 \
+	j riscv_exception				;\
+END(riscv_trap_##name)				 \
 
 /* 0x100 Trap from user-mode */
 TRAP(user)
@@ -24,20 +24,20 @@ TRAP(hypervisor)
 TRAP(machine)
 
 /* 0x1FC Non-maskable interrupt(s) */
-ENTRY_EXC(bmk_riscv_irq_nmi, 0x20)
+ENTRY_EXC(riscv_irq_nmi, 0x20)
 .space 28			/* 0x1E0 */
-	j bmk_riscv_exception	/* 0x1FC */
-END(bmk_riscv_irq_nmi)
+	j riscv_exception	/* 0x1FC */
+END(riscv_irq_nmi)
 
 /* 0x200 Reset vector */
 ENTRY_EXC(_start, 0x40)
 	la gp, _gp
 	la sp, bootstack
-	/* disable interrupts, will be enabled in bmk_riscv_boot */
+	/* disable interrupts, will be enabled in riscv_boot */
 	csrci mstatus, MSTATUS_IE
 	/* ready to go */
 	li a0, 0
-	jal bmk_riscv_boot
+	jal riscv_boot
 	/* exit */
 1:
 	j 1b
@@ -47,7 +47,7 @@ END(_start)
 .space 4096
 bootstack:
 
-ENTRY(bmk_riscv_exception)
+ENTRY(riscv_exception)
 	addi sp, sp, -32*REGBYTES
 	STORE  x1,  1*REGBYTES(sp)
 	STORE  x2,  2*REGBYTES(sp)
@@ -89,13 +89,13 @@ ENTRY(bmk_riscv_exception)
 	/* exception was a trap */
 	csrr a1, mepc
 	csrr a2, mbadaddr
-	tail bmk_cpu_riscv_trap
+	tail riscv_trap
 1:
 	andi a0, a0, 0xF
-	beqz a0, bmk_cpu_isr_sw
+	beqz a0, riscv_isr_sw
 	li t0, 1
-	beq t0, a0, bmk_cpu_isr_timer
-	tail bmk_cpu_isr
+	beq t0, a0, riscv_isr_timer
+	tail riscv_isr
 2:
 	LOAD  x1,  1*REGBYTES(sp)
 	LOAD  x2,  2*REGBYTES(sp)
@@ -131,4 +131,4 @@ ENTRY(bmk_riscv_exception)
 
 	addi sp, sp, 32*REGBYTES
 	eret
-END(bmk_riscv_exception)
+END(riscv_exception)

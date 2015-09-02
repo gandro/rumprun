@@ -8,6 +8,8 @@
 
 #include "nolibc.h"
 
+__thread int tlstest = 0xB00D;
+
 static ssize_t
 writestr(int fd, const char *str)
 {
@@ -23,6 +25,8 @@ mainthread(void *cmdline)
 	bmk_printf("rump kernel init complete, rv %d\n", rv);
 
 	writestr(1, "Hello, stdout!\n");
+	
+	bmk_printf("tlstest: %x\n", tlstest);
 
 	bmk_printf("open(/notexisting): ");
 	fd = rump_sys_open("/notexisting", 0);

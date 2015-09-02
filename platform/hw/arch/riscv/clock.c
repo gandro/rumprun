@@ -23,8 +23,8 @@
  * SUCH DAMAGE.
  */
 
-#include <bmk/kernel.h>
-#include <bmk/clock_subr.h>
+#include <hw/kernel.h>
+#include <hw/clock_subr.h>
 
 #include "encoding.h"
 
@@ -38,7 +38,7 @@
  * Return monotonic time since system boot in nanoseconds.
  */
 bmk_time_t
-bmk_cpu_clock_now(void)
+bmk_platform_cpu_clock_monotonic(void)
 {
 	return rdcycle();
 }
@@ -47,7 +47,7 @@ bmk_cpu_clock_now(void)
  * Return epoch offset (wall time offset to monotonic clock start).
  */
 bmk_time_t
-bmk_cpu_clock_epochoffset(void)
+bmk_platform_cpu_clock_epochoffset(void)
 {
 
 	return 0;
@@ -59,11 +59,11 @@ bmk_cpu_clock_epochoffset(void)
  * too short.
  */
 void
-bmk_cpu_block(bmk_time_t until)
+bmk_platform_cpu_block(bmk_time_t until)
 {
 	bmk_time_t now;
 
 	do {
-		now = bmk_cpu_clock_now();
+		now = bmk_platform_cpu_clock_monotonic();
 	} while (until < now);
 }

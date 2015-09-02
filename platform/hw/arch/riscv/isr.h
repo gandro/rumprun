@@ -23,19 +23,17 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _BMK_CORE_RISCV_ISR_H_
-#define _BMK_CORE_RISCV_ISR_H_
+#ifndef _RISCV_ISR_H_
+#define _RISCV_ISR_H_
 
-#define BMK_CORE_RISCV_SOFTWARE_IRQ	0
-#define BMK_CORE_RISCV_TIMER_IRQ	1
-#define BMK_CORE_RISCV_HTIF_IRQ		2
-#define BMK_CORE_RISCV_MAX_IRQ		3
+#define RISCV_SOFTWARE_IRQ	0
+#define RISCV_TIMER_IRQ		1
+#define RISCV_HTIF_IRQ		2
+#define RISCV_MAX_IRQ		3
 
-extern int bmk_cpu_ie;
+void riscv_trap(int code, void *pc, void *badaddr);
+void riscv_isr_timer(void);
+void riscv_isr_sw(void);
+void riscv_isr(int irq);
 
-void bmk_cpu_riscv_trap(int code, void *pc, void *badaddr);
-void bmk_cpu_isr_timer(void);
-void bmk_cpu_isr_sw(void);
-void bmk_cpu_isr(int irq);
-
-#endif /* _BMK_CORE_RISCV_ISR_H_ */
+#endif /* _RISCV_ISR_H_ */

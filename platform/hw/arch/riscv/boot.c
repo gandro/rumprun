@@ -23,8 +23,8 @@
  * SUCH DAMAGE.
  */
 
-#include <bmk/types.h>
-#include <bmk/kernel.h>
+#include <hw/types.h>
+#include <hw/kernel.h>
 
 #include <bmk-core/core.h>
 #include <bmk-core/sched.h>
@@ -35,7 +35,7 @@
  * this is not the case for spike. Thus, we assume a fixed amount of memory.
  */
 static void
-bmk_riscv_meminit(void)
+loadmem(void)
 {
 	extern char _end[];
 	unsigned long mem_start, mem_end;
@@ -48,19 +48,17 @@ bmk_riscv_meminit(void)
 }
 
 void
-bmk_riscv_boot(void)
+riscv_boot(void)
 {
-	bmk_printf_init(bmk_cons_putc, NULL);
+	bmk_printf_init(cons_putc, NULL);
 	bmk_core_init(BMK_THREAD_STACK_PAGE_ORDER, PAGE_SHIFT);
 
 	bmk_printf("rump kernel bare metal riscv bootstrap\n\n");
-
-	bmk_cpu_init();
 	bmk_sched_init();
 
-	bmk_riscv_meminit();
-	bmk_intr_init();
+	loadmem();
+	intr_init();
 	spl0();
 
-	bmk_run("");
+	bmk_sched_startmain(mainthread, "");
 }
