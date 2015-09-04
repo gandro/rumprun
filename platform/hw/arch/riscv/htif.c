@@ -26,29 +26,80 @@
 #include <hw/types.h>
 #include <hw/kernel.h>
 
+#include <bmk-core/printf.h>
+
 #include "encoding.h"
- 
-#define HTIF_DEV_SHIFT		(56)
-#define HTIF_CMD_SHIFT		(48)
+#include "htif.h"
 
-#define HTIF_CMD_READ		(0x00ULL)
-#define HTIF_CMD_WRITE		(0x01ULL)
-#define HTIF_CMD_IDENTIFY	(0xFFULL)
+static unsigned long mfromhost[HTIF_MAX_DEV];
+static unsigned cons_devid = 1;
 
-#define HTIF_DEV_CONSOLE	(1ULL) /* hard-coded, no device discovery yet */
+void
+htif_handle_irq(void)
+{
+	unsigned dev;
+	unsigned long packet = swap_csr(mfromhost, 0);
 
-#define HTIF_CONSOLE_PUTC	((HTIF_DEV_CONSOLE << HTIF_DEV_SHIFT) | \
-				 (HTIF_CMD_WRITE << HTIF_CMD_SHIFT))
+	dev = ((packet & HTIF_DEV_MASK) >> HTIF_DEV_SHIFT);
+
+	if (mfromhost[dev]) {
+		bmk_printf("HTIF: Dropping packet for device %d\n", dev);
+	}
+
+	mfromhost[dev] = packet;
+}
+
+void 
+htif_tohost(unsigned dev, unsigned cmd, unsigned long data)
+{
+	unsigned long packet = 0;
+	packet |= ((unsigned long)dev << HTIF_DEV_SHIFT) & HTIF_DEV_MASK;
+	packet |= ((unsigned long)cmd << HTIF_CMD_SHIFT) & HTIF_CMD_MASK;
+	packet |= data & HTIF_DATA_MASK;
+
+	while (swap_csr(mtohost, packet) != 0);
+}
+
+unsigned long
+htif_fromhost(unsigned dev)
+{
+	unsigned long response = 0;
+
+	if (dev < HTIF_MAX_DEV) {
+		response = mfromhost[dev];
+		mfromhost[dev] = 0;
+	}
+
+	return response;
+}
+
+unsigned long
+htif_sync_tofromhost(unsigned dev, unsigned cmd, unsigned long data)
+{
+	unsigned long response;
+
+	splhigh();
+
+	/* make sure mfromhost is clean */
+	if (read_csr(mfromhost)) {
+		htif_handle_irq();
+	}
+
+	htif_tohost(dev, cmd, data);
+
+	/* busy wait for response */
+	while (!read_csr(mfromhost));
+	response = swap_csr(mfromhost, 0);
+
+	spl0();
+	
+	return response;
+}
 
 void
 cons_putc(int c)
 {
-	uint64_t packet = HTIF_CONSOLE_PUTC | c;
-
-	splhigh();
-	while (swap_csr(mtohost, packet) != 0);
-	while (swap_csr(mfromhost, 0));
-	spl0();
+	htif_sync_tofromhost(cons_devid, HTIF_CMD_WRITE, c);
 }
 
 void

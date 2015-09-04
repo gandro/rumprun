@@ -29,11 +29,10 @@
 #define RISCV_SOFTWARE_IRQ	0
 #define RISCV_TIMER_IRQ		1
 #define RISCV_HTIF_IRQ		2
-#define RISCV_MAX_IRQ		3
 
 void riscv_trap(int code, void *pc, void *badaddr);
 void riscv_isr_timer(void);
 void riscv_isr_sw(void);
-void riscv_isr(int irq);
+void riscv_isr_htif(void);
 
 #endif /* _RISCV_ISR_H_ */

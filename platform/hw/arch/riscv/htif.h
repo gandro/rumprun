@@ -9,7 +9,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
  * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -23,32 +23,29 @@
  * SUCH DAMAGE.
  */
 
-#include <hw/kernel.h>
+#ifndef _RISCV_HTIF_H_
+#define _RISCV_HTIF_H_
 
-#include "isr.h"
+#define HTIF_MAX_DEV		(256)
 
-int
-cpu_intr_init(int intr)
-{
+#define HTIF_DEV_SHIFT		(56)
+#define HTIF_DEV_MASK		(0xFF00000000000000UL)
 
-	if (intr <= RISCV_HTIF_IRQ) {
-		return BMK_EGENERIC;
-	}
-	
-	/* XXX: There is currently no way to mask or ack non-timer or non-sw
-	 interrupts on RISC-V, so we just forward everything we get to isr() */
-	return 0;
-}
+#define HTIF_CMD_SHIFT		(48)
+#define HTIF_CMD_MASK		(0x00FF000000000000UL)
 
-void
-cpu_intr_ack(unsigned mask)
-{
+#define HTIF_DATA_MASK		(0x0000FFFFFFFFFFFFUL)
 
-    /* XXX: not really clear how one can do this on RISC-V at this point. */
-}
+#define HTIF_CMD_READ		(0x00U)
+#define HTIF_CMD_WRITE		(0x01U)
+#define HTIF_CMD_IDENTIFY	(0xFFU)
 
-void
-cpu_init(void)
-{
+#define HTIF_DEV_CONSOLE	(1ULL) /* hard-coded, no device discovery yet */
 
-}
+void htif_handle_irq(void);
+
+void 		htif_tohost(unsigned, unsigned, unsigned long);
+unsigned long 	htif_fromhost(unsigned);
+unsigned long 	htif_sync_tofromhost(unsigned, unsigned, unsigned long);
+
+#endif  /* _RISCV_HTIF_H_ */

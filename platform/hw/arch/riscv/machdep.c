@@ -30,12 +30,12 @@
 #include <bmk-core/printf.h>
 
 #include "isr.h"
+#include "htif.h"
 #include "encoding.h"
    
 extern int spldepth;
 
-unsigned irqmask = 0;
-long bmk_mfromhost = 0;
+long riscv_mfromhost = 0;
 
 void
 splhigh(void)
@@ -59,8 +59,8 @@ spl0(void)
 void
 riscv_trap(int code, void *pc, void *badaddr)
 {
-    bmk_printf("Trap %d at pc %p, addr %p\n", code, pc, badaddr);
-    while(1);
+	bmk_printf("Trap %d at pc %p, addr %p", code, pc, badaddr);
+	bmk_platform_halt("\n");
 }
 
 void riscv_isr_timer(void)
@@ -68,24 +68,25 @@ void riscv_isr_timer(void)
 
 }
 
-void riscv_isr(int irq)
-{
-	if (irq == RISCV_HTIF_IRQ) {
-		bmk_mfromhost = swap_csr(mfromhost, 0);
-	} else {
-		isr(irq);
-	}
-}
-
 void riscv_isr_sw(void)
 {
 	bmk_platform_halt("software interrupt fired!?");
 }
 
+/* If we don't handle HTIF interrupts by reseting the MFROMHOST register,
+ * it will trigger again before any registered interrupt handlers can run,
+ * essentially deadlocking the system.
+ */
+void riscv_isr_htif(void)
+{
+	htif_handle_irq();
+	isr(RISCV_HTIF_IRQ);
+}
+
 /* XXX: RISC-V Thread Local Storage is not properly documented. According to
  *      https://lists.riscv.org/lists/arc/sw-dev/2015-05/msg00032.html
  *      the TP register points directly the the first static TLS block,
- *      at the end of the TCB, which is neither Variant I nor II. 
+ *      at the end of the TCB, which is neither Variant I nor II.
  *      We assume next->btcb_t is Variant I and work around it.
  */
 #define TLSOFFSET (2*sizeof(void *))
