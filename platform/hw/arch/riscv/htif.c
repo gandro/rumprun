@@ -31,8 +31,23 @@
 #include "encoding.h"
 #include "htif.h"
 
+#define HTIF_MAX_DEV		(256)
+
+#define HTIF_DEV_SHIFT		(56)
+#define HTIF_DEV_MASK		(0xFF00000000000000UL)
+
+#define HTIF_CMD_SHIFT		(48)
+#define HTIF_CMD_MASK		(0x00FF000000000000UL)
+
+#define HTIF_DATA_MASK		(0x0000FFFFFFFFFFFFUL)
+
+#define HTIF_CMD_READ		(0x00U)
+#define HTIF_CMD_WRITE		(0x01U)
+#define HTIF_CMD_IDENTIFY	(0xFFU)
+
+#define HTIF_DEV_CONSOLE	(1ULL) /* hard-coded, no device discovery yet */
+
 static unsigned long mfromhost[HTIF_MAX_DEV];
-static unsigned cons_devid = 1;
 
 void
 htif_handle_irq(void)
@@ -50,7 +65,7 @@ htif_handle_irq(void)
 }
 
 void 
-htif_tohost(unsigned dev, unsigned cmd, unsigned long data)
+bmk_htif_tohost(unsigned dev, unsigned cmd, unsigned long data)
 {
 	unsigned long packet = 0;
 	packet |= ((unsigned long)dev << HTIF_DEV_SHIFT) & HTIF_DEV_MASK;
@@ -61,7 +76,7 @@ htif_tohost(unsigned dev, unsigned cmd, unsigned long data)
 }
 
 unsigned long
-htif_fromhost(unsigned dev)
+bmk_htif_fromhost(unsigned dev)
 {
 	unsigned long response = 0;
 
@@ -74,7 +89,7 @@ htif_fromhost(unsigned dev)
 }
 
 unsigned long
-htif_sync_tofromhost(unsigned dev, unsigned cmd, unsigned long data)
+bmk_htif_sync_tofromhost(unsigned dev, unsigned cmd, unsigned long data)
 {
 	unsigned long response;
 
@@ -85,7 +100,7 @@ htif_sync_tofromhost(unsigned dev, unsigned cmd, unsigned long data)
 		htif_handle_irq();
 	}
 
-	htif_tohost(dev, cmd, data);
+	bmk_htif_tohost(dev, cmd, data);
 
 	/* busy wait for response */
 	while (!read_csr(mfromhost));
@@ -99,7 +114,7 @@ htif_sync_tofromhost(unsigned dev, unsigned cmd, unsigned long data)
 void
 cons_putc(int c)
 {
-	htif_sync_tofromhost(cons_devid, HTIF_CMD_WRITE, c);
+	bmk_htif_sync_tofromhost(HTIF_DEV_CONSOLE, HTIF_CMD_WRITE, c);
 }
 
 void

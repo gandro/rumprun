@@ -1,0 +1,26 @@
+ioconf htif
+
+include "conf/files"
+include "rump/dev/files.rump"
+
+device	htif { }
+attach	htif at mainbus
+file	htif.c		htif
+
+pseudo-root mainbus*
+
+htif* at mainbus?
+
+device	htif_eth
+attach	htif_eth at htif
+file	htif_eth.c	htif_eth
+
+htif_eth* at htif?
+
+device	htif_char
+attach	htif_char at htif
+file	htif_char.c	htif_char
+
+htif_char* at htif?
+
+#device-major	htif_char	char 103	htif_char

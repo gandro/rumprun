@@ -1,5 +1,5 @@
-/*-
- * Copyright (c) 2015 Sebastian Wicki.  All Rights Reserved.
+/*
+ * Copyright (c) 2010 Antti Kantee.  All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -9,7 +9,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
  * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -23,14 +23,19 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _RISCV_HTIF_H_
-#define _RISCV_HTIF_H_
+#include <sys/cdefs.h>
 
-void htif_handle_irq(void);
+#include <sys/param.h>
+#include <sys/conf.h>
+#include <sys/device.h>
 
-/* Exported interface, used by librumpdev_htif */
-void 		bmk_htif_tohost(unsigned, unsigned, unsigned long);
-unsigned long 	bmk_htif_fromhost(unsigned);
-unsigned long 	bmk_htif_sync_tofromhost(unsigned, unsigned, unsigned long);
+#include "ioconf.c"
 
-#endif  /* _RISCV_HTIF_H_ */
+#include "rump_private.h"
+#include "rump_dev_private.h"
+
+RUMP_COMPONENT(RUMP_COMPONENT_DEV)
+{
+	config_init_component(cfdriver_ioconf_htif,
+	    cfattach_ioconf_htif, cfdata_ioconf_htif);
+}
