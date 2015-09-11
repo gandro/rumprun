@@ -26,10 +26,13 @@
 #include <hw/types.h>
 #include <hw/kernel.h>
 
+#include <bmk-core/memalloc.h>
 #include <bmk-core/printf.h>
+#include <bmk-core/queue.h>
 
 #include "encoding.h"
 #include "htif.h"
+#include "isr.h"
 
 #define HTIF_MAX_DEV		(256)
 
@@ -47,21 +50,61 @@
 
 #define HTIF_DEV_CONSOLE	(1ULL) /* hard-coded, no device discovery yet */
 
-static unsigned long mfromhost[HTIF_MAX_DEV];
+struct htif_irq_handler {
+	unsigned int			hih_dev;
+	unsigned long			hih_data;
 
-void
-htif_handle_irq(void)
+	bmk_htif_handler_t		hih_fun;
+	void *				hih_arg;
+	SLIST_ENTRY(htif_irq_handler)	hih_entries;
+};
+
+SLIST_HEAD(htif_ih_head, htif_irq_handler);
+
+static struct htif_ih_head hihandlers;
+
+static int
+isr_bouncer(void *arg)
 {
-	unsigned dev;
-	unsigned long packet = swap_csr(mfromhost, 0);
+	int rv, didwork = 0;
+	struct htif_irq_handler *hih;
 
-	dev = ((packet & HTIF_DEV_MASK) >> HTIF_DEV_SHIFT);
-
-	if (mfromhost[dev]) {
-		bmk_printf("HTIF: Dropping packet for device %d\n", dev);
+	SLIST_FOREACH(hih, &hihandlers, hih_entries) {
+		if (hih->hih_data == 0) continue;
+	
+		rv = hih->hih_fun(hih->hih_arg, hih->hih_data);
+		if (rv) {
+			hih->hih_data = 0;
+			didwork = 1;
+		}
 	}
 
-	mfromhost[dev] = packet;
+	return didwork;
+}
+
+/* If we don't handle HTIF interrupts by reseting the MFROMHOST register,
+ * it will trigger again before any registered interrupt handlers can run,
+ * essentially deadlocking the system.
+ */
+void
+riscv_isr_htif(void)
+{
+	unsigned dev;
+	struct htif_irq_handler *hih;
+	unsigned long data = swap_csr(mfromhost, 0);
+
+	dev = ((data & HTIF_DEV_MASK) >> HTIF_DEV_SHIFT);
+
+	SLIST_FOREACH(hih, &hihandlers, hih_entries) {
+		if (hih->hih_dev == dev) {
+			hih->hih_data = data;
+		}
+	}
+	
+	if (!SLIST_EMPTY(&hihandlers)) {
+		/* schedule isr_bouncer */
+		isr(1 << RISCV_IRQ_HTIF);
+	}
 }
 
 void 
@@ -75,6 +118,7 @@ bmk_htif_tohost(unsigned dev, unsigned cmd, unsigned long data)
 	while (swap_csr(mtohost, packet) != 0);
 }
 
+#if 0
 unsigned long
 bmk_htif_fromhost(unsigned dev)
 {
@@ -87,6 +131,7 @@ bmk_htif_fromhost(unsigned dev)
 
 	return response;
 }
+#endif
 
 unsigned long
 bmk_htif_sync_tofromhost(unsigned dev, unsigned cmd, unsigned long data)
@@ -97,7 +142,7 @@ bmk_htif_sync_tofromhost(unsigned dev, unsigned cmd, unsigned long data)
 
 	/* make sure mfromhost is clean */
 	if (read_csr(mfromhost)) {
-		htif_handle_irq();
+		riscv_isr_htif();
 	}
 
 	bmk_htif_tohost(dev, cmd, data);
@@ -109,6 +154,52 @@ bmk_htif_sync_tofromhost(unsigned dev, unsigned cmd, unsigned long data)
 	spl0();
 	
 	return response;
+}
+
+int
+bmk_htif_register_irq_handler(unsigned dev,
+				bmk_htif_handler_t handler, void *arg)
+{
+	int first_handler, err;
+	struct htif_irq_handler *hih;
+
+	if (dev >= HTIF_MAX_DEV)
+		return BMK_EINVAL;
+
+	hih = bmk_xmalloc_bmk(sizeof(*hih));
+	if (!hih)
+		return BMK_ENOMEM;
+
+	first_handler = SLIST_EMPTY(&hihandlers);
+
+	hih->hih_dev = dev;
+	hih->hih_data = 0;
+	hih->hih_fun = handler;
+	hih->hih_arg = arg;
+	SLIST_INSERT_HEAD(&hihandlers, hih, hih_entries);
+
+	if (first_handler) {
+		err = bmk_isr_init(isr_bouncer, NULL, RISCV_IRQ_HTIF);
+		if (err) {
+			SLIST_REMOVE_HEAD(&hihandlers, hih_entries);
+			bmk_memfree(hih, BMK_MEMWHO_WIREDBMK);
+			return err;
+		}
+	}
+	
+	return 0;
+}
+
+void *
+bmk_htif_dmalloc(size_t size, size_t align)
+{
+	return bmk_memalloc(size, align, BMK_MEMWHO_WIREDBMK);
+}
+
+void
+bmk_htif_dmfree(void *addr)
+{
+	bmk_memfree(addr, BMK_MEMWHO_WIREDBMK);
 }
 
 void

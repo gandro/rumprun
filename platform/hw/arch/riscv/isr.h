@@ -26,9 +26,9 @@
 #ifndef _RISCV_ISR_H_
 #define _RISCV_ISR_H_
 
-#define RISCV_SOFTWARE_IRQ	0
-#define RISCV_TIMER_IRQ		1
-#define RISCV_HTIF_IRQ		2
+#define RISCV_IRQ_SOFTWARE	0
+#define RISCV_IRQ_TIMER		1
+#define RISCV_IRQ_HTIF		2
 
 void riscv_trap(int code, void *pc, void *badaddr);
 void riscv_isr_timer(void);

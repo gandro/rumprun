@@ -31,7 +31,7 @@ int
 cpu_intr_init(int intr)
 {
 
-	if (intr <= RISCV_HTIF_IRQ) {
+	if (intr < RISCV_HTIF_IRQ) {
 		return BMK_EGENERIC;
 	}
 	

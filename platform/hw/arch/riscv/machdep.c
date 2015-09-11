@@ -73,16 +73,6 @@ void riscv_isr_sw(void)
 	bmk_platform_halt("software interrupt fired!?");
 }
 
-/* If we don't handle HTIF interrupts by reseting the MFROMHOST register,
- * it will trigger again before any registered interrupt handlers can run,
- * essentially deadlocking the system.
- */
-void riscv_isr_htif(void)
-{
-	htif_handle_irq();
-	isr(RISCV_HTIF_IRQ);
-}
-
 /* XXX: RISC-V Thread Local Storage is not properly documented. According to
  *      https://lists.riscv.org/lists/arc/sw-dev/2015-05/msg00032.html
  *      the TP register points directly the the first static TLS block,

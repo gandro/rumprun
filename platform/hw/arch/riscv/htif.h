@@ -26,11 +26,15 @@
 #ifndef _RISCV_HTIF_H_
 #define _RISCV_HTIF_H_
 
-void htif_handle_irq(void);
+typedef int (*bmk_htif_handler_t) (void *, unsigned long);
 
 /* Exported interface, used by librumpdev_htif */
-void 		bmk_htif_tohost(unsigned, unsigned, unsigned long);
-unsigned long 	bmk_htif_fromhost(unsigned);
-unsigned long 	bmk_htif_sync_tofromhost(unsigned, unsigned, unsigned long);
+void bmk_htif_tohost(unsigned, unsigned, unsigned long);
+unsigned long bmk_htif_sync_tofromhost(unsigned, unsigned, unsigned long);
+
+int bmk_htif_register_irq_handler(unsigned, bmk_htif_handler_t, void *);
+
+void *bmk_htif_dmalloc(size_t, size_t);
+void bmk_htif_dmfree(void *);
 
 #endif  /* _RISCV_HTIF_H_ */

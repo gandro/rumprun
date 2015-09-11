@@ -97,6 +97,8 @@ ENTRY(riscv_exception)
 	beq t0, a0, riscv_isr_timer
 	li t0, 2
 	beq t0, a0, riscv_isr_htif
+	li t0, 1
+	sllw a0, t0, a0
 	tail isr
 2:
 	LOAD  x1,  1*REGBYTES(sp)
