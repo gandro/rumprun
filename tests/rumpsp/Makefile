@@ -27,7 +27,9 @@ ifeq (${MACHINE},i386)
 LDFLAGS+= -m elf_i386
 endif
 
-OBJS= main.o $(abspath ../../platform/hw/rumprun.o)
+SP_OBJS=rumpuser_sp.o rumpsp.o
+
+OBJS= main.o $(SP_OBJS) $(abspath ../../platform/hw/rumprun.o)
 
 .PHONY: clean run libhtif
 
@@ -41,7 +43,8 @@ libhtif:
 main.elf: ${OBJS} libhtif
 	${LD} ${LDFLAGS} -T${LDSCRIPT} 					\
 	${OBJS} 							\
-	--whole-archive -lrumpdev_htif -lrumpdev --no-whole-archive \
+	-lrumpkern_sysproxy						\
+	--whole-archive -lrumpdev_htif -lrumpdev --no-whole-archive	\
 	--whole-archive -lrumpvfs -lrump --no-whole-archive		\
 	-lbmk_core -lbmk_rumpuser					\
 	-lcompiler_rt 							\
@@ -51,5 +54,5 @@ run: main.elf
 	spike +char=rumpsp.sock main.elf
 
 clean:
-	rm -rf main.o main.elf 
+	rm -rf main.o main.elf $(SP_OBJS)
 	(cd libhtif && ${RUMPMAKE} cleandir )

@@ -26,7 +26,7 @@
 typedef unsigned short	uint16_t;
 typedef unsigned int	uint32_t;
 typedef unsigned char	uint8_t;
-typedef int		register_t;
+typedef long		register_t;
 
 #define assert		bmk_assert
 #define memcpy		bmk_memcpy
@@ -62,7 +62,7 @@ typedef int		register_t;
 #include <bmk-rumpuser/rumpuser.h>
 
 #include "rumpuser_sp.h"
-#include "rumpsp_sock.c"
+#include "rumpsp.h"
 
 
 static int
@@ -309,6 +309,7 @@ ioflag_wait(struct ioflag *flag)
 {
 
 	while (flag->status == IOFLAG_STATUS_WAITING) {
+		bmk_sched_blockprepare();
 		bmk_sched_block();
 	}
 
@@ -910,7 +911,7 @@ client_syscall(struct ioreqbuf *reqbuf)
 	//spc->spc_syscallreq = 0;
 	lwproc_release();
 
-	DPRINTF(("rump_sp: got return value %d & %d/%d\n",
+	DPRINTF(("rump_sp: got return value %d & %ld/%ld\n",
 	    rv, retval[0], retval[1]));
 
 	client_resp_syscall(cl, reqno, rv, retval);

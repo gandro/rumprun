@@ -47,7 +47,8 @@ htif_print(void *aux, const char *name)
 {
 	struct htif_attach_args *haa = aux;
 	
-	if (!name) return QUIET;
+	if (!name)
+		return QUIET;
 
 	aprint_normal("htif dev %d: \"%s\"", haa->haa_dev, haa->haa_name);
 	return UNSUPP;
@@ -64,22 +65,31 @@ htif_attach(device_t parent, device_t self, void *aux)
 {
 	struct htif_attach_args haa;
 	struct htif_softc * const sc = device_private(self);
-	char buf[64] __attribute__((aligned(HTIF_MEM_ALIGN)));
-
+	char *name;
+	paddr_t pbuf;
+	int error;
+	
 	sc->sc_dev = self;
 
 	aprint_normal("\n");
 
-	//rumphtif_irq_init(htif_isr, sc);
+	error = htif_dmalloc(128, HTIF_MEM_ALIGN, (vaddr_t*) &name, &pbuf);
+	if (error) {
+		aprint_error_dev(self, "failed to allocate buffer\n");
+		return;
+	}
 
 	for (unsigned dev = 0; dev < HTIF_MAX_DEV; dev++) {
-		htif_dev_request_sync(dev, 0xFF, (uintptr_t)buf << 8 | 0xFF, NULL);
+		htif_dev_request_sync(dev, 0xFF, pbuf << 8 | 0xFF, NULL);
 
-		if (buf[0]) {
-			haa.haa_name = buf;
+		if (name[0]) {
+			haa.haa_name = name;
 			haa.haa_dev = dev;
 			config_found_ia(self, "htif", &haa, htif_print);
 		}
 	}
+
+	htif_dmfree((vaddr_t) name);
+
 	device_printf(self, "finished probing\n");
 }

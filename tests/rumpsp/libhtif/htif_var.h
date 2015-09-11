@@ -33,7 +33,7 @@
 
 #define HTIF_MAX_DEV			256
 
-typedef void (*htif_irq_handler_t)(device_t);
+typedef int (*htif_irq_handler_t)(void *, unsigned long);
 
 struct htif_attach_args {
 	const char *haa_name;
@@ -41,8 +41,10 @@ struct htif_attach_args {
 };
 
 int htif_dev_request(unsigned, unsigned, unsigned long);
-int htif_dev_response(unsigned, unsigned long *);
 int htif_dev_request_sync(unsigned, unsigned, unsigned long, unsigned long *);
-int htif_dev_register_irq(unsigned, htif_irq_handler_t);
+int htif_dev_register_irq(unsigned, htif_irq_handler_t, void *);
+
+int htif_dmalloc(size_t, size_t, vaddr_t *, paddr_t *);
+void htif_dmfree(vaddr_t);
 
 #endif /* _RISCV_HTIF_HTIF_VAR_H_ */

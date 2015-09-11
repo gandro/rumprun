@@ -20,18 +20,12 @@
 void
 mainthread(void *cmdline)
 {
-	int rv, fd;
+	int rv;
 
 	rv = rump_init();
 	bmk_printf("rump kernel init complete, rv %d\n", rv);
 
-	fd = rump_sys_open("/dev/htifchar0", RUMP_O_RDWR);
-	if (fd == -1)
-		panic("failed to open htifchar0");
-	
-	ssize_t n = rump_sys_write(fd, "some data", 10);
-	if (n < 0)
-		panic("write: %zd", n);
+	rump_init_server("/dev/htifchar0");
 
 	rump_sys_reboot(0, NULL);
 }

@@ -1,84 +1,170 @@
-#define MAXFDS 256
-#define RUMPSP_EAGAIN -1
+#include <hw/kernel.h>
 
-struct rumpsp_chan;
+#include <bmk-core/errno.h>
+#include <bmk-core/printf.h>
+#include <bmk-core/string.h>
 
-typedef void (*rumpsp_accept_fn)(struct rumpsp_chan *, void **token);
-typedef void (*rumpsp_callback_fn)(struct rumpsp_chan *, void *token);
+#include <rump/rump.h>
+#include <rump/rumperr.h>
+
+#include "nolibc.h"
+#include "rumpsp.h"
+
+#define MAXFDS 1
+
+#define errno (*bmk_sched_geterrno())
 
 struct rumpsp_chan {
 	void *token;
-
 	int fd;
+	struct pollfd pollfd;
 };
 
-struct rumpsp_handlers {
-	rumpsp_accept_fn accepted;
-	rumpsp_callback_fn writable;
-	rumpsp_callback_fn readable;
-};
-
-/*
-static unsigned int maxidx;
-static struct rumpsp_chan chanfds[MAXFDS];
+static int accepted = 0;
+static struct rumpsp_chan chanfd;
+static struct pollfd pfd;
 
 static struct rumpsp_handlers handlers;
 
-static unsigned int
-getidx(struct rumpsp_chan *chan)
-{
-
-	return chan - chanfds;
-}*/
-
-static void
+void
 rumpsp_cleanup(void)
 {
-
+	rump_sys_close(chanfd.fd);
 }
 
-static int
+int
 rumpsp_init_server(const char *url, struct rumpsp_handlers hndlrs)
 {
+	chanfd.fd = rump_sys_open(url, RUMP_O_RDWR|RUMP_O_NONBLOCK);
+	if (chanfd.fd == -1)
+		return errno;
+
+	pfd.fd = chanfd.fd;
+	pfd.events = POLLIN|POLLOUT;
+	pfd.revents = 0;
+
+	handlers = hndlrs;
+
 	return 0;
 }
 
-static int
+int
 rumpsp_read(struct rumpsp_chan *chan, void *data, size_t size, size_t *nbytes)
 {
+	ssize_t n;
+	
+	n = rump_sys_read(chan->fd, data, size);
+	if (n > 0) {
+		*nbytes = (size_t) n;
+		return 0;
+	}
+	
+	*nbytes = 0;
+	
+	if (n == 0) {
+		return RUMP_ENOTCONN;
+	}
 
-	return 0;
+	if (errno == RUMP_EAGAIN) {
+		return RUMPSP_EAGAIN;
+	}
+
+	return errno;
 }
 
-static int
+int
 rumpsp_write(struct rumpsp_chan *chan, void *data, size_t size, size_t *nbytes)
 {
-	return 0;
+	ssize_t n;
+
+	n = rump_sys_write(chan->fd, data, size);
+	if (n > 0) {
+		*nbytes = (size_t) n;
+		return 0;
+	}
+
+	*nbytes = 0;
+
+	if (n == 0) {
+		return RUMP_ENOTCONN;
+	}
+
+	if (errno == RUMP_EAGAIN) {
+		return RUMPSP_EAGAIN;
+	}
+
+	return errno;
 }
 
-static void
+void
 rumpsp_close(struct rumpsp_chan *chan)
 {
 
 }
 
-#define RUMPSP_EVENT_WRITABLE	0x1
-#define RUMPSP_EVENT_READABLE	0x2
-
-static int 
+int 
 rumpsp_enable_events(struct rumpsp_chan *chan, int events)
 {
+	if (events & RUMPSP_EVENT_WRITABLE) {
+		pfd.events |= POLLOUT;
+	}
+	
+	if (events & RUMPSP_EVENT_READABLE) {
+		pfd.events |= POLLIN;
+	}
+
+	if (pfd.events)
+		pfd.fd = chan->fd;
+
 	return 0;
 }
 
-static int 
+int 
 rumpsp_disable_events(struct rumpsp_chan *chan, int events)
 {
+	if (events & RUMPSP_EVENT_WRITABLE) {
+		pfd.events &= ~POLLOUT;
+	}
+	
+	if (events & RUMPSP_EVENT_READABLE) {
+		pfd.events &= ~POLLIN;
+	}
+	
+	if (!pfd.events)
+		pfd.fd = -1;
+	
 	return 0;
 }
 
-static int
+int
 rumpsp_dispatch(int timeout_ms)
 {
+	int rv;
+
+	rv = rump_sys_poll(&pfd, 1, timeout_ms);
+	if (rv == -1)
+		return errno;
+
+	if (rv == 1) {
+		if (!accepted && !(pfd.revents & POLLHUP)) {
+			bmk_printf("calling accept\n");
+			pfd.events = 0;
+			handlers.accepted(&chanfd, &chanfd.token);
+			accepted = 1;
+		} else if (accepted){
+			if (pfd.revents & POLLIN) {
+				bmk_printf("calling readable\n");
+				handlers.readable(&chanfd, chanfd.token);
+			}
+
+			if (pfd.revents & POLLOUT) {
+				bmk_printf("calling writeable\n");
+				handlers.writable(&chanfd, chanfd.token);
+			}
+		}
+
+
+	}
+	
 	return 0;
 }
